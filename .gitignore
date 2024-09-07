@@ -1,0 +1,9 @@
+.vscode/
+.Listings/
+.Objects/
+project.uvproj
+project.uvopt
+project.uvgui.user
+project.uvgui.poplar
+
+

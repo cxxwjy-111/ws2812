@@ -1,0 +1,150 @@
+C51 COMPILER V9.60.7.0   EXTI                                                              09/01/2024 11:16:54 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE EXTI
+OBJECT MODULE PLACED IN .\Objects\Exti.obj
+COMPILER INVOKED BY: D:\keil_c51\C51\BIN\C51.EXE Exti.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listin
+                    -gs\Exti.lst) TABS(2) OBJECT(.\Objects\Exti.obj)
+
+line level    source
+
+   1          /*---------------------------------------------------------------------*/
+   2          /* --- STC MCU Limited ------------------------------------------------*/
+   3          /* --- STC 1T Series MCU Demo Programme -------------------------------*/
+   4          /* --- Mobile: (86)13922805190 ----------------------------------------*/
+   5          /* --- Fax: 86-0513-55012956,55012947,55012969 ------------------------*/
+   6          /* --- Tel: 86-0513-55012928,55012929,55012966 ------------------------*/
+   7          /* --- Web: www.STCAI.com ---------------------------------------------*/
+   8          /* --- BBS: www.STCAIMCU.com  -----------------------------------------*/
+   9          /* --- QQ:  800003751 -------------------------------------------------*/
+  10          /* 如果要在程序中使用此代码,请在程序中注明使用了STC的资料及程序            */
+  11          /*---------------------------------------------------------------------*/
+  12          
+  13          #include  "Exti.h"
+  14          
+  15          //========================================================================
+  16          // 函数: u8 Ext_Inilize(u8 EXT, EXTI_InitTypeDef *INTx)
+  17          // 描述: 外部中断初始化程序.
+  18          // 参数: EXT: 外部中断号, INTx: 结构参数,请参考Exti.h里的定义.
+  19          // 返回: 成功返回 SUCCESS, 错误返回 FAIL.
+  20          // 版本: V1.0, 2012-10-22
+  21          //========================================================================
+  22          u8  Ext_Inilize(u8 EXT, EXTI_InitTypeDef *INTx)
+  23          {
+  24   1        if(EXT >  EXT_INT1) return FAIL;  //空操作
+  25   1        
+  26   1        if(EXT == EXT_INT0) //外中断0
+  27   1        {
+  28   2          IE0  = 0;         //外中断0标志位
+  29   2          INT0_Mode(INTx->EXTI_Mode);
+  30   2          return SUCCESS;   //成功
+  31   2        }
+  32   1      
+  33   1        if(EXT == EXT_INT1) //外中断1
+  34   1        {
+  35   2          IE1  = 0;         //外中断1标志位
+  36   2          INT1_Mode(INTx->EXTI_Mode);
+  37   2          return SUCCESS;   //成功
+  38   2        }
+  39   1        return FAIL;  //失败
+  40   1      }
+  41          
+  42          //========================================================================
+  43          // 函数: NVIC_INT0_Init
+  44          // 描述: INT0嵌套向量中断控制器初始化.
+  45          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+  46          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+  47          // 返回: 执行结果 SUCCESS/FAIL.
+  48          // 版本: V1.0, 2020-09-29
+  49          //========================================================================
+  50          u8 NVIC_INT0_Init(u8 State, u8 Priority)
+  51          {
+  52   1        if(State > ENABLE) return FAIL;
+  53   1        if(Priority > Priority_3) return FAIL;
+  54   1        INT0_Interrupt(State);
+C51 COMPILER V9.60.7.0   EXTI                                                              09/01/2024 11:16:54 PAGE 2   
+
+  55   1        INT0_Priority(Priority);
+  56   1        return SUCCESS;
+  57   1      }
+  58          
+  59          //========================================================================
+  60          // 函数: NVIC_INT1_Init
+  61          // 描述: INT1嵌套向量中断控制器初始化.
+  62          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+  63          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+  64          // 返回: 执行结果 SUCCESS/FAIL.
+  65          // 版本: V1.0, 2020-09-29
+  66          //========================================================================
+  67          u8 NVIC_INT1_Init(u8 State, u8 Priority)
+  68          {
+  69   1        if(State > ENABLE) return FAIL;
+  70   1        if(Priority > Priority_3) return FAIL;
+  71   1        INT1_Interrupt(State);
+  72   1        INT1_Priority(Priority);
+  73   1        return SUCCESS;
+  74   1      }
+  75          
+  76          //========================================================================
+  77          // 函数: NVIC_INT2_Init
+  78          // 描述: INT2嵌套向量中断控制器初始化.
+  79          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+  80          // 参数: Priority: 中断优先级, NULL.
+  81          // 返回: 执行结果 SUCCESS/FAIL.
+  82          // 版本: V1.0, 2020-09-29
+  83          //========================================================================
+  84          u8 NVIC_INT2_Init(u8 State, u8 Priority)
+  85          {
+  86   1        if(State > ENABLE) return FAIL;
+  87   1        INT2_Interrupt(State);
+  88   1        Priority = NULL;
+  89   1        return SUCCESS;
+  90   1      }
+  91          
+  92          //========================================================================
+  93          // 函数: NVIC_INT3_Init
+  94          // 描述: INT3嵌套向量中断控制器初始化.
+  95          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+  96          // 参数: Priority: 中断优先级, NULL.
+  97          // 返回: 执行结果 SUCCESS/FAIL.
+  98          // 版本: V1.0, 2020-09-29
+  99          //========================================================================
+ 100          u8 NVIC_INT3_Init(u8 State, u8 Priority)
+ 101          {
+ 102   1        if(State > ENABLE) return FAIL;
+ 103   1        INT3_Interrupt(State);
+ 104   1        Priority = NULL;
+ 105   1        return SUCCESS;
+ 106   1      }
+ 107          
+ 108          //========================================================================
+ 109          // 函数: NVIC_INT4_Init
+ 110          // 描述: INT4嵌套向量中断控制器初始化.
+ 111          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+ 112          // 参数: Priority: 中断优先级, NULL.
+ 113          // 返回: 执行结果 SUCCESS/FAIL.
+ 114          // 版本: V1.0, 2020-09-29
+ 115          //========================================================================
+ 116          u8 NVIC_INT4_Init(u8 State, u8 Priority)
+C51 COMPILER V9.60.7.0   EXTI                                                              09/01/2024 11:16:54 PAGE 3   
+
+ 117          {
+ 118   1        if(State > ENABLE) return FAIL;
+ 119   1        INT4_Interrupt(State);
+ 120   1        Priority = NULL;
+ 121   1        return SUCCESS;
+ 122   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    256    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

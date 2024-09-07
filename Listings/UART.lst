@@ -1,0 +1,684 @@
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN .\Objects\UART.obj
+COMPILER INVOKED BY: D:\keil_c51\C51\BIN\C51.EXE UART.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listin
+                    -gs\UART.lst) TABS(2) OBJECT(.\Objects\UART.obj)
+
+line level    source
+
+   1          /*---------------------------------------------------------------------*/
+   2          /* --- STC MCU Limited ------------------------------------------------*/
+   3          /* --- STC 1T Series MCU Demo Programme -------------------------------*/
+   4          /* --- Mobile: (86)13922805190 ----------------------------------------*/
+   5          /* --- Fax: 86-0513-55012956,55012947,55012969 ------------------------*/
+   6          /* --- Tel: 86-0513-55012928,55012929,55012966 ------------------------*/
+   7          /* --- Web: www.STCAI.com ---------------------------------------------*/
+   8          /* --- BBS: www.STCAIMCU.com  -----------------------------------------*/
+   9          /* --- QQ:  800003751 -------------------------------------------------*/
+  10          /* 如果要在程序中使用此代码,请在程序中注明使用了STC的资料及程序            */
+  11          /*---------------------------------------------------------------------*/
+  12          
+  13          #include "UART.h"
+  14          
+  15          //========================================================================
+  16          //                               本地变量声明
+  17          //========================================================================
+  18          
+  19          #ifdef UART1
+  20          COMx_Define COM1;
+  21          u8  xdata TX1_Buffer[COM_TX1_Lenth];  //发送缓冲
+  22          u8  xdata RX1_Buffer[COM_RX1_Lenth];  //接收缓冲
+  23          #endif
+  24          #ifdef UART2
+              COMx_Define COM2;
+              u8  xdata TX2_Buffer[COM_TX2_Lenth];  //发送缓冲
+              u8  xdata RX2_Buffer[COM_RX2_Lenth];  //接收缓冲
+              #endif
+  29          #ifdef UART3
+              COMx_Define COM3;
+              u8  xdata TX3_Buffer[COM_TX3_Lenth];  //发送缓冲
+              u8  xdata RX3_Buffer[COM_RX3_Lenth];  //接收缓冲
+              #endif
+  34          #ifdef UART4
+              COMx_Define COM4;
+              u8  xdata TX4_Buffer[COM_TX4_Lenth];  //发送缓冲
+              u8  xdata RX4_Buffer[COM_RX4_Lenth];  //接收缓冲
+              #endif
+  39          
+  40          //========================================================================
+  41          // 函数: UART_Configuration
+  42          // 描述: UART初始化程序.
+  43          // 参数: UARTx: UART组号, COMx结构参数,请参考UART.h里的定义.
+  44          // 返回: none.
+  45          // 版本: V1.0, 2012-10-22
+  46          //========================================================================
+  47          u8 UART_Configuration(u8 UARTx, COMx_InitDefine *COMx)
+  48          {
+  49   1      #if  defined( UART1 ) || defined( UART2 ) || defined( UART3 ) || defined( UART4 )
+  50   1        u16 i;
+  51   1        u32 j;
+  52   1      #else
+                UARTx = NULL;
+                COMx = NULL;
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 2   
+
+              #endif
+  56   1      
+  57   1      #ifdef UART1
+  58   1        if(UARTx == UART1)
+  59   1        {
+  60   2          COM1.TX_send    = 0;
+  61   2          COM1.TX_write   = 0;
+  62   2          COM1.B_TX_busy  = 0;
+  63   2          COM1.RX_Cnt     = 0;
+  64   2          COM1.RX_TimeOut = 0;
+  65   2          
+  66   2          for(i=0; i<COM_TX1_Lenth; i++)  TX1_Buffer[i] = 0;
+  67   2          for(i=0; i<COM_RX1_Lenth; i++)  RX1_Buffer[i] = 0;
+  68   2      
+  69   2          SCON = (SCON & 0x3f) | COMx->UART_Mode; //模式设置
+  70   2          if((COMx->UART_Mode == UART_9bit_BRTx) || (COMx->UART_Mode == UART_8bit_BRTx))  //可变波特率
+  71   2          {
+  72   3            j = (MAIN_Fosc / 4) / COMx->UART_BaudRate;  //按1T计算
+  73   3            if(j >= 65536UL)  return FAIL;  //错误
+  74   3            j = 65536UL - j;
+  75   3            if(COMx->UART_BRT_Use == BRT_Timer1)
+  76   3            {
+  77   4              TR1 = 0;
+  78   4              AUXR &= ~0x01;    //S1 BRT Use Timer1;
+  79   4              TMOD &= ~(1<<6);  //Timer1 set As Timer
+  80   4              TMOD &= ~0x30;    //Timer1_16bitAutoReload;
+  81   4              AUXR |=  (1<<6);  //Timer1 set as 1T mode
+  82   4              TH1 = (u8)(j>>8);
+  83   4              TL1 = (u8)j;
+  84   4              ET1 = 0;  //禁止中断
+  85   4              TMOD &= ~0x40;  //定时
+  86   4              INTCLKO &= ~0x02; //不输出时钟
+  87   4              TR1  = 1;
+  88   4            }
+  89   3            else if(COMx->UART_BRT_Use == BRT_Timer2)
+  90   3            {
+  91   4              AUXR &= ~(1<<4);  //Timer stop
+  92   4              AUXR |= 0x01;   //S1 BRT Use Timer2;
+  93   4              AUXR &= ~(1<<3);  //Timer2 set As Timer
+  94   4              AUXR |=  (1<<2);  //Timer2 set as 1T mode
+  95   4              T2H = (u8)(j>>8);
+  96   4              T2L = (u8)j;
+  97   4              IE2  &= ~(1<<2);  //禁止中断
+  98   4              AUXR |=  (1<<4);  //Timer run enable
+  99   4            }
+ 100   3            else return FAIL; //错误
+ 101   3          }
+ 102   2          else if(COMx->UART_Mode == UART_ShiftRight)
+ 103   2          {
+ 104   3            if(COMx->BaudRateDouble == ENABLE)  AUXR |=  (1<<5);  //固定波特率SysClk/2
+ 105   3            else                AUXR &= ~(1<<5);  //固定波特率SysClk/12
+ 106   3          }
+ 107   2          else if(COMx->UART_Mode == UART_9bit) //固定波特率SysClk*2^SMOD/64
+ 108   2          {
+ 109   3            if(COMx->BaudRateDouble == ENABLE)  PCON |=  (1<<7);  //固定波特率SysClk/32
+ 110   3            else                PCON &= ~(1<<7);  //固定波特率SysClk/64
+ 111   3          }
+ 112   2          UART1_RxEnable(COMx->UART_RxEnable);  //UART接收使能
+ 113   2      
+ 114   2          return SUCCESS;
+ 115   2        }
+ 116   1      #endif
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 3   
+
+ 117   1      #ifdef UART2
+                if(UARTx == UART2)
+                {
+                  COM2.TX_send    = 0;
+                  COM2.TX_write   = 0;
+                  COM2.B_TX_busy  = 0;
+                  COM2.RX_Cnt     = 0;
+                  COM2.RX_TimeOut = 0;
+              
+                  for(i=0; i<COM_TX2_Lenth; i++)  TX2_Buffer[i] = 0;
+                  for(i=0; i<COM_RX2_Lenth; i++)  RX2_Buffer[i] = 0;
+              
+                  if((COMx->UART_Mode == UART_9bit_BRTx) ||(COMx->UART_Mode == UART_8bit_BRTx)) //可变波特率
+                  {
+                    if(COMx->UART_Mode == UART_9bit_BRTx) S2CON |=  (1<<7); //9bit
+                    else                  S2CON &= ~(1<<7); //8bit
+                    j = (MAIN_Fosc / 4) / COMx->UART_BaudRate;  //按1T计算
+                    if(j >= 65536UL)  return FAIL;  //错误
+                    j = 65536UL - j;
+                    AUXR &= ~(1<<4);  //Timer stop
+                    AUXR &= ~(1<<3);  //Timer2 set As Timer
+                    AUXR |=  (1<<2);  //Timer2 set as 1T mode
+                    T2H = (u8)(j>>8);
+                    T2L = (u8)j;
+                    IE2  &= ~(1<<2);  //禁止中断
+                    AUXR |=  (1<<4);  //Timer run enable
+                  }
+                  else  return FAIL;  //模式错误
+                  UART2_RxEnable(COMx->UART_RxEnable);  //UART接收使能
+              
+                  return SUCCESS;
+                }
+              #endif
+ 150   1      #ifdef UART3
+                if(UARTx == UART3)
+                {
+                  COM3.TX_send    = 0;
+                  COM3.TX_write   = 0;
+                  COM3.B_TX_busy  = 0;
+                  COM3.RX_Cnt     = 0;
+                  COM3.RX_TimeOut = 0;
+                  for(i=0; i<COM_TX3_Lenth; i++)  TX3_Buffer[i] = 0;
+                  for(i=0; i<COM_RX3_Lenth; i++)  RX3_Buffer[i] = 0;
+              
+                  if((COMx->UART_Mode == UART_9bit_BRTx) || (COMx->UART_Mode == UART_8bit_BRTx))  //可变波特率
+                  {
+                    if(COMx->UART_Mode == UART_9bit_BRTx) S3CON |=  (1<<7); //9bit
+                    else                  S3CON &= ~(1<<7); //8bit
+                    j = (MAIN_Fosc / 4) / COMx->UART_BaudRate;  //按1T计算
+                    if(j >= 65536UL)  return FAIL;  //错误
+                    j = 65536UL - j;
+                    if(COMx->UART_BRT_Use == BRT_Timer3)
+                    {
+                      S3CON |=  (1<<6);   //S3 BRT Use Timer3;
+                      T3H = (u8)(j>>8);
+                      T3L = (u8)j;
+                      T4T3M &= 0xf0;
+                      T4T3M |= 0x0a;      //Timer3 set As Timer, 1T mode, Start timer3
+                    }
+                    else if(COMx->UART_BRT_Use == BRT_Timer2)
+                    {
+                      AUXR &= ~(1<<4);    //Timer stop
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 4   
+
+                      S3CON &= ~(1<<6);   //S3 BRT Use Timer2;
+                      AUXR &= ~(1<<3);    //Timer2 set As Timer
+                      AUXR |=  (1<<2);    //Timer2 set as 1T mode
+                      T2H = (u8)(j>>8);
+                      T2L = (u8)j;
+                      IE2  &= ~(1<<2);  //禁止中断
+                      AUXR |=  (1<<4);  //Timer run enable
+                    }
+                    else return FAIL; //错误
+                  }
+                  else  return FAIL;  //模式错误
+                  UART3_RxEnable(COMx->UART_RxEnable);  //UART接收使能
+              
+                  return SUCCESS;
+                }
+              #endif
+ 195   1      #ifdef UART4
+                if(UARTx == UART4)
+                {
+                  COM4.TX_send    = 0;
+                  COM4.TX_write   = 0;
+                  COM4.B_TX_busy  = 0;
+                  COM4.RX_Cnt     = 0;
+                  COM4.RX_TimeOut = 0;
+                  for(i=0; i<COM_TX4_Lenth; i++)  TX4_Buffer[i] = 0;
+                  for(i=0; i<COM_RX4_Lenth; i++)  RX4_Buffer[i] = 0;
+              
+                  if((COMx->UART_Mode == UART_9bit_BRTx) || (COMx->UART_Mode == UART_8bit_BRTx))  //可变波特率
+                  {
+                    if(COMx->UART_Mode == UART_9bit_BRTx) S4CON |=  (1<<7); //9bit
+                    else                  S4CON &= ~(1<<7); //8bit
+                    j = (MAIN_Fosc / 4) / COMx->UART_BaudRate;  //按1T计算
+                    if(j >= 65536UL)  return FAIL;  //错误
+                    j = 65536UL - j;
+                    if(COMx->UART_BRT_Use == BRT_Timer4)
+                    {
+                      S4CON |=  (1<<6);   //S4 BRT Use Timer4;
+                      T4H = (u8)(j>>8);
+                      T4L = (u8)j;
+                      T4T3M &= 0x0f;
+                      T4T3M |= 0xa0;      //Timer4 set As Timer, 1T mode, Start timer4
+                    }
+                    else if(COMx->UART_BRT_Use == BRT_Timer2)
+                    {
+                      AUXR &= ~(1<<4);    //Timer stop
+                      S4CON &= ~(1<<6);   //S4 BRT Use Timer2;
+                      AUXR &= ~(1<<3);    //Timer2 set As Timer
+                      AUXR |=  (1<<2);    //Timer2 set as 1T mode
+                      T2H = (u8)(j>>8);
+                      T2L = (u8)j;
+                      IE2  &= ~(1<<2);  //禁止中断
+                      AUXR |=  (1<<4);  //Timer run enable
+                    }
+                    else return FAIL; //错误
+                  }
+                  else  return FAIL;  //模式错误
+                  UART4_RxEnable(COMx->UART_RxEnable);  //UART接收使能
+                  
+                  return SUCCESS;
+                }
+              #endif
+ 240   1        return FAIL;  //错误
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 5   
+
+ 241   1      }
+ 242          
+ 243          /*********************************************************/
+ 244          
+ 245          /********************* UART1 函数 ************************/
+ 246          #ifdef UART1
+ 247          void TX1_write2buff(u8 dat) //串口1发送函数
+ 248          {
+ 249   1          #if(UART_QUEUE_MODE == 1)
+                TX1_Buffer[COM1.TX_write] = dat;  //装发送缓冲，使用队列式数据发送，一次性发送数据长度不要超过缓冲区大小（
+             -COM_TXn_Lenth）
+                if(++COM1.TX_write >= COM_TX1_Lenth)  COM1.TX_write = 0;
+              
+                if(COM1.B_TX_busy == 0)   //空闲
+                {  
+                  COM1.B_TX_busy = 1;   //标志忙
+                  TI = 1;         //触发发送中断
+                }
+                  #else
+ 259   1          //以下是阻塞方式发送方法
+ 260   1        SBUF = dat;
+ 261   1        COM1.B_TX_busy = 1;   //标志忙
+ 262   1        while(COM1.B_TX_busy);
+ 263   1          #endif
+ 264   1      }
+ 265          
+ 266          void PrintString1(u8 *puts)
+ 267          {
+ 268   1          for (; *puts != 0;  puts++)  TX1_write2buff(*puts);   //遇到停止符0结束
+ 269   1      }
+ 270          
+ 271          #endif
+ 272          
+ 273          /********************* UART2 函数 ************************/
+ 274          #ifdef UART2
+              void TX2_write2buff(u8 dat) //串口2发送函数
+              {
+                  #if(UART_QUEUE_MODE == 1)
+                TX2_Buffer[COM2.TX_write] = dat;  //装发送缓冲，使用队列式数据发送，一次性发送数据长度不要超过缓冲区大小（
+             -COM_TXn_Lenth）
+                if(++COM2.TX_write >= COM_TX2_Lenth)  COM2.TX_write = 0;
+              
+                if(COM2.B_TX_busy == 0)   //空闲
+                {  
+                  COM2.B_TX_busy = 1;   //标志忙
+                  SET_TI2();        //触发发送中断
+                }
+                  #else
+                  //以下是阻塞方式发送方法
+                S2BUF = dat;
+                COM2.B_TX_busy = 1;   //标志忙
+                while(COM2.B_TX_busy);
+                  #endif
+              }
+              
+              void PrintString2(u8 *puts)
+              {
+                  for (; *puts != 0;  puts++)  TX2_write2buff(*puts);   //遇到停止符0结束
+              }
+              
+              #endif
+ 300          
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 6   
+
+ 301          /********************* UART3 函数 ************************/
+ 302          #ifdef UART3
+              void TX3_write2buff(u8 dat) //串口3发送函数
+              {
+                  #if(UART_QUEUE_MODE == 1)
+                TX3_Buffer[COM3.TX_write] = dat;  //装发送缓冲，使用队列式数据发送，一次性发送数据长度不要超过缓冲区大小（
+             -COM_TXn_Lenth）
+                if(++COM3.TX_write >= COM_TX3_Lenth)  COM3.TX_write = 0;
+              
+                if(COM3.B_TX_busy == 0)   //空闲
+                {  
+                  COM3.B_TX_busy = 1;   //标志忙
+                  SET_TI3();        //触发发送中断
+                }
+                  #else
+                  //以下是阻塞方式发送方法
+                S3BUF = dat;
+                COM3.B_TX_busy = 1;   //标志忙
+                while(COM3.B_TX_busy);
+                  #endif
+              }
+              
+              void PrintString3(u8 *puts)
+              {
+                  for (; *puts != 0;  puts++)  TX3_write2buff(*puts);   //遇到停止符0结束
+              }
+              
+              #endif
+ 328          
+ 329          /********************* UART4 函数 ************************/
+ 330          #ifdef UART4
+              void TX4_write2buff(u8 dat) //串口4发送函数
+              {
+                  #if(UART_QUEUE_MODE == 1)
+                TX4_Buffer[COM4.TX_write] = dat;  //装发送缓冲，使用队列式数据发送，一次性发送数据长度不要超过缓冲区大小（
+             -COM_TXn_Lenth）
+                if(++COM4.TX_write >= COM_TX4_Lenth)  COM4.TX_write = 0;
+              
+                if(COM4.B_TX_busy == 0)   //空闲
+                {  
+                  COM4.B_TX_busy = 1;   //标志忙
+                  SET_TI4();        //触发发送中断
+                }
+                  #else
+                  //以下是阻塞方式发送方法
+                S4BUF = dat;
+                COM4.B_TX_busy = 1;   //标志忙
+                while(COM4.B_TX_busy);
+                  #endif
+              }
+              
+              void PrintString4(u8 *puts)
+              {
+                  for (; *puts != 0;  puts++)  TX4_write2buff(*puts);   //遇到停止符0结束
+              }
+              
+              #endif
+ 356          
+ 357          /*********************************************************/
+ 358          /*
+ 359          void COMx_write2buff(u8 UARTx, u8 dat)  //UART1/UART2/UART3/UART4
+ 360          {
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 7   
+
+ 361            if(UARTx == UART1)  TX1_write2buff(dat);
+ 362            if(UARTx == UART2)  TX2_write2buff(dat);
+ 363            if(UARTx == UART3)  TX3_write2buff(dat);
+ 364            if(UARTx == UART4)  TX4_write2buff(dat);
+ 365          }
+ 366          
+ 367          void PrintString(u8 UARTx, u8 *puts)
+ 368          {
+ 369              for (; *puts != 0;  puts++)  COMx_write2buff(UARTx,*puts);  //遇到停止符0结束
+ 370          }
+ 371          */
+ 372          
+ 373          /********************* Printf 函数 ************************/
+ 374          #if(PRINTF_SELECT == 1)
+ 375          
+ 376          char putchar(char c)
+ 377          {
+ 378   1        TX1_write2buff(c);
+ 379   1        return c;
+ 380   1      }
+ 381          
+ 382          #elif(PRINTF_SELECT == 2)
+              
+              char putchar(char c)
+              {
+                TX2_write2buff(c);
+                return c;
+              }
+              
+              #elif(PRINTF_SELECT == 3)
+              
+              char putchar(char c)
+              {
+                TX3_write2buff(c);
+                return c;
+              }
+              
+              #elif(PRINTF_SELECT == 4)
+              
+              char putchar(char c)
+              {
+                TX4_write2buff(c);
+                return c;
+              }
+              
+              #endif
+ 407          
+ 408          //========================================================================
+ 409          // 函数: NVIC_UART1_Init
+ 410          // 描述: UART1嵌套向量中断控制器初始化.
+ 411          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+ 412          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+ 413          // 返回: 执行结果 SUCCESS/FAIL.
+ 414          // 版本: V1.0, 2020-09-29
+ 415          //========================================================================
+ 416          
+ 417          #ifdef UART1
+ 418          u8 NVIC_UART1_Init(u8 State, u8 Priority)
+ 419          {
+ 420   1        if(State > ENABLE) return FAIL;
+ 421   1        if(Priority > Priority_3) return FAIL;
+ 422   1        UART1_Interrupt(State);
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 8   
+
+ 423   1        UART1_Priority(Priority);
+ 424   1        return SUCCESS;
+ 425   1      }
+ 426          #endif
+ 427          
+ 428          //========================================================================
+ 429          // 函数: NVIC_UART2_Init
+ 430          // 描述: UART2嵌套向量中断控制器初始化.
+ 431          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+ 432          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+ 433          // 返回: 执行结果 SUCCESS/FAIL.
+ 434          // 版本: V1.0, 2020-09-29
+ 435          //========================================================================
+ 436          
+ 437          #ifdef UART2
+              u8 NVIC_UART2_Init(u8 State, u8 Priority)
+              {
+                if(State > ENABLE) return FAIL;
+                if(Priority > Priority_3) return FAIL;
+                UART2_Interrupt(State);
+                UART2_Priority(Priority);
+                return SUCCESS;
+              }
+              #endif
+ 447          
+ 448          //========================================================================
+ 449          // 函数: NVIC_UART3_Init
+ 450          // 描述: UART3嵌套向量中断控制器初始化.
+ 451          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+ 452          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+ 453          // 返回: 执行结果 SUCCESS/FAIL.
+ 454          // 版本: V1.0, 2020-09-29
+ 455          //========================================================================
+ 456          
+ 457          #ifdef UART3
+              u8 NVIC_UART3_Init(u8 State, u8 Priority)
+              {
+                if(State > ENABLE) return FAIL;
+                if(Priority > Priority_3) return FAIL;
+                UART3_Interrupt(State);
+                UART3_Priority(Priority);
+                return SUCCESS;
+              }
+              #endif
+ 467          
+ 468          //========================================================================
+ 469          // 函数: NVIC_UART4_Init
+ 470          // 描述: UART4嵌套向量中断控制器初始化.
+ 471          // 参数: State:    中断使能状态, ENABLE/DISABLE.
+ 472          // 参数: Priority: 中断优先级, Priority_0,Priority_1,Priority_2,Priority_3.
+ 473          // 返回: 执行结果 SUCCESS/FAIL.
+ 474          // 版本: V1.0, 2020-09-29
+ 475          //========================================================================
+ 476          
+ 477          #ifdef UART4
+              u8 NVIC_UART4_Init(u8 State, u8 Priority)
+              {
+                if(State > ENABLE) return FAIL;
+                if(Priority > Priority_3) return FAIL;
+                UART4_Interrupt(State);
+                UART4_Priority(Priority);
+                return SUCCESS;
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 9   
+
+              }
+              #endif
+ 487          
+ 488          
+ 489          //========================================================================
+ 490          // 函数: UART1_ISR_Handler
+ 491          // 描述: UART1中断函数.
+ 492          // 参数: none.
+ 493          // 返回: none.
+ 494          // 版本: V1.0, 2020-09-23
+ 495          //========================================================================
+ 496          #ifdef UART1
+ 497          void UART1_ISR_Handler (void) interrupt UART1_VECTOR
+ 498          {
+ 499   1        if(RI)
+ 500   1        {
+ 501   2          RI = 0;
+ 502   2      
+ 503   2              if(COM1.RX_Cnt >= COM_RX1_Lenth)  COM1.RX_Cnt = 0;
+ 504   2              RX1_Buffer[COM1.RX_Cnt++] = SBUF;
+ 505   2              COM1.RX_TimeOut = TimeOutSet1;
+ 506   2        }
+ 507   1      
+ 508   1        if(TI)
+ 509   1        {
+ 510   2          TI = 0;
+ 511   2          
+ 512   2              #if(UART_QUEUE_MODE == 1)   //判断是否使用队列模式
+                  if(COM1.TX_send != COM1.TX_write)
+                  {
+                    SBUF = TX1_Buffer[COM1.TX_send];
+                    if(++COM1.TX_send >= COM_TX1_Lenth)   COM1.TX_send = 0;
+                  }
+                  else  COM1.B_TX_busy = 0;
+                      #else
+ 520   2              COM1.B_TX_busy = 0;     //使用阻塞方式发送直接清除繁忙标志
+ 521   2              #endif
+ 522   2        }
+ 523   1      }
+ 524          #endif
+ 525          
+ 526          //========================================================================
+ 527          // 函数: UART2_ISR_Handler
+ 528          // 描述: UART2中断函数.
+ 529          // 参数: none.
+ 530          // 返回: none.
+ 531          // 版本: V1.0, 2020-09-23
+ 532          //========================================================================
+ 533          #ifdef UART2
+              void UART2_ISR_Handler (void) interrupt UART2_VECTOR
+              {
+                if(RI2)
+                {
+                  CLR_RI2();
+              
+                  
+                      if(COM2.RX_Cnt >= COM_RX2_Lenth)  COM2.RX_Cnt = 0;
+                      RX2_Buffer[COM2.RX_Cnt++] = S2BUF;
+                      COM2.RX_TimeOut = TimeOutSet2;
+                }
+              
+                if(TI2)
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 10  
+
+                {
+                  CLR_TI2();
+                  
+                      #if(UART_QUEUE_MODE == 1)   //判断是否使用队列模式
+                  if(COM2.TX_send != COM2.TX_write)
+                  {
+                    S2BUF = TX2_Buffer[COM2.TX_send];
+                    if(++COM2.TX_send >= COM_TX2_Lenth)   COM2.TX_send = 0;
+                  }
+                  else  COM2.B_TX_busy = 0;
+                      #else
+                      COM2.B_TX_busy = 0;     //使用阻塞方式发送直接清除繁忙标志
+                      #endif
+                }
+              }
+              #endif
+ 563          
+ 564          //========================================================================
+ 565          // 函数: UART3_ISR_Handler
+ 566          // 描述: UART3中断函数.
+ 567          // 参数: none.
+ 568          // 返回: none.
+ 569          // 版本: V1.0, 2020-09-23
+ 570          //========================================================================
+ 571          #ifdef UART3
+              void UART3_ISR_Handler (void) interrupt UART3_VECTOR
+              {
+                if(RI3)
+                {
+                  CLR_RI3();
+              
+                      if(COM3.RX_Cnt >= COM_RX3_Lenth)  COM3.RX_Cnt = 0;
+                      RX3_Buffer[COM3.RX_Cnt++] = S3BUF;
+                      COM3.RX_TimeOut = TimeOutSet3;
+                }
+              
+                if(TI3)
+                {
+                  CLR_TI3();
+                  
+                      #if(UART_QUEUE_MODE == 1)   //判断是否使用队列模式
+                  if(COM3.TX_send != COM3.TX_write)
+                  {
+                    S3BUF = TX3_Buffer[COM3.TX_send];
+                    if(++COM3.TX_send >= COM_TX3_Lenth)   COM3.TX_send = 0;
+                  }
+                  else  COM3.B_TX_busy = 0;
+                      #else
+                      COM3.B_TX_busy = 0;     //使用阻塞方式发送直接清除繁忙标志
+                      #endif
+                }
+              }
+              #endif
+ 600          
+ 601          //========================================================================
+ 602          // 函数: UART4_ISR_Handler
+ 603          // 描述: UART4中断函数.
+ 604          // 参数: none.
+ 605          // 返回: none.
+ 606          // 版本: V1.0, 2020-09-23
+ 607          //========================================================================
+ 608          #ifdef UART4
+C51 COMPILER V9.60.7.0   UART                                                              09/01/2024 11:16:54 PAGE 11  
+
+              void UART4_ISR_Handler (void) interrupt UART4_VECTOR
+              {
+                if(RI4)
+                {
+                  CLR_RI4();
+              
+                      if(COM4.RX_Cnt >= COM_RX4_Lenth)  COM4.RX_Cnt = 0;
+                      RX4_Buffer[COM4.RX_Cnt++] = S4BUF;
+                      COM4.RX_TimeOut = TimeOutSet4;
+                }
+              
+                if(TI4)
+                {
+                  CLR_TI4();
+                  
+                      #if(UART_QUEUE_MODE == 1)   //判断是否使用队列模式
+                  if(COM4.TX_send != COM4.TX_write)
+                  {
+                    S4BUF = TX4_Buffer[COM4.TX_send];
+                    if(++COM4.TX_send >= COM_TX4_Lenth)   COM4.TX_send = 0;
+                  }
+                  else  COM4.B_TX_busy = 0;
+                      #else
+                      COM4.B_TX_busy = 0;     //使用阻塞方式发送直接清除繁忙标志
+                      #endif
+                }
+              }
+              #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    581    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    261       7
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
